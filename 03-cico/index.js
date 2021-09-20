@@ -5,6 +5,7 @@ const wax = require('wax-on')
 const MongoUtil = require('./MongoUtil')
 // import in ObjectId function from the mongodb package
 const ObjectId = require('mongodb').ObjectId;
+const { getFoodRecordByID } = require('./data')
 
 // setup dotenv library
 // const dotenv = require('dotenv');
@@ -34,6 +35,9 @@ const heleprs = require('handlebars-helpers')({
 
 // enable forms
 app.use(express.urlencoded({extended: false}));
+
+// helper function
+
 
 // ROUTES
 async function main(){
@@ -78,7 +82,7 @@ async function main(){
             foodRecordName, calories, tags
         })
 
-        res.send("Add new food ok")
+        res.redirect('/food_records')
         
     })
 
@@ -153,6 +157,112 @@ async function main(){
         })
         res.redirect('/food_records')
     })
+
+    app.get('/food_record/:food_record_id', async function(req,res){
+        let db = MongoUtil.getDB();
+        let foodRecord = await db.collection('food_records').findOne({
+            '_id':ObjectId(req.params.food_record_id)
+        })
+        res.render('food_details', {
+            'foodRecord':foodRecord
+        })
+    })
+
+    app.get('/food_record/:food_record_id/notes/add', async function(req,res){
+        // alternatively: use the getFoodRecordByID function from the data.js module
+        // let foodRecord = getFoodRecordByID(req.params.food_record_id)
+        
+        let db = MongoUtil.getDB();
+        let foodRecordID = req.params.food_record_id;
+        // use findOne if we are expecting only one result
+        let foodRecord = await db.collection('food_records').findOne({
+            '_id': ObjectId(foodRecordID)
+        })
+
+        res.render('add_note', {
+            'foodRecord': foodRecord
+        })
+        
+    })
+
+    
+
+    app.post('/food_record/:food_record_id/notes/add', async function(req,res){
+        let content = req.body.content;
+
+        let db = MongoUtil.getDB();
+        db.collection('food_records').updateOne({
+            '_id':ObjectId(req.params.food_record_id)
+        },{
+            '$push':{
+                'notes': {
+                    '_id': ObjectId(),
+                    'content': content
+                }
+            }
+        })
+        res.redirect('/food_records')
+
+    })
+
+    app.get('/notes/:note_id/update', async function(req, res){
+        let db = MongoUtil.getDB();
+        let results = await db.collection('food_records').findOne({
+            'notes._id':ObjectId(req.params.note_id)
+        },{
+            'projection':{
+                'notes':{
+                    '$elemMatch':{
+                        '_id':ObjectId(req.params.note_id)
+                    }
+                }
+            }
+        })
+        
+        let wantedNote = results.notes[0];
+        res.render('edit_note', {
+            'note': wantedNote
+        })
+    })
+
+    app.post('/notes/:note_id/update', async function(req,res){
+        let db = MongoUtil.getDB();
+        let foodRecord = await db.collection('food_records').findOne({
+            'notes._id': ObjectId(req.params.note_id)
+        })
+
+        // update the note that has been changed
+        await db.collection('food_records').updateOne({
+            'notes._id': ObjectId(req.params.note_id)
+        },{
+            '$set':{
+                'notes.$.content': req.body.content
+            }
+        })
+        res.redirect('/food_record/' + foodRecord._id);
+    })
+
+    app.get('/notes/:note_id/delete', async function(req,res){
+        let db = MongoUtil.getDB();
+        // we only need the foodRecord for redirection
+        let foodRecord = await db.collection('food_records').findOne({
+            'notes._id': ObjectId(req.params.note_id)
+        })
+
+        // delete the note from the food record
+        await db.collection("food_records").updateOne({
+            'notes._id':ObjectId(req.params.note_id)
+        },{
+            '$pull':{
+                'notes': {
+                    '_id': ObjectId(req.params.note_id)
+                }
+            }
+        })
+
+        res.redirect('/food_record/' + foodRecord._id);
+    })
+
 }
 
 main();

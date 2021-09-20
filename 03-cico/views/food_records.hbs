@@ -2,6 +2,7 @@
 
 {{#block 'content'}}
 <h1>All Food Records</h1>
+<a href="/food_record/add" class="btn btn-primary">Add New</a>
 <table class="table">
     <thead>
         <tr>
@@ -16,10 +17,15 @@
     <tbody>
         {{#each records}}
         <tr>
-            <td>{{this.foodRecordName}}</td>
+            <td>
+                <a href="/food_record/{{this._id}}">
+                {{this.foodRecordName}}
+                </a>
+            </td>
             <td>{{this.calories}}</td>
             <td>{{this.tags}}</td>
             <td>
+                <a class="btn btn-primary btn-sm" href="/food_record/{{this._id}}/notes/add">Add Note</a>
                 <a class="btn btn-primary btn-sm" href="/food_record/{{this._id}}/edit">Edit</a>
                 <a class="btn btn-danger btn-sm" href="/food_record/{{this._id}}/delete">Delete</a>
             </td>
