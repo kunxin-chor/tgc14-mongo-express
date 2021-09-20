@@ -132,6 +132,27 @@ async function main(){
         res.redirect('/food_records')
 
     })
+
+    app.get('/food_record/:food_record_id/delete', async function(req,res){
+        let db = MongoUtil.getDB();
+        let foodRecordID = req.params.food_record_id;
+        // use findOne if we are expecting only one result
+        let foodRecord = await db.collection('food_records').findOne({
+            '_id': ObjectId(foodRecordID)
+        })
+        res.render('delete_food_record',{
+            foodRecord,
+            // "foodRecord": foodRecord
+        })
+    })
+
+    app.post('/food_record/:food_record_id/delete', async function(req, res){
+        let db = MongoUtil.getDB();
+        await db.collection('food_records').deleteOne({
+            '_id':ObjectId(req.params.food_record_id)
+        })
+        res.redirect('/food_records')
+    })
 }
 
 main();
